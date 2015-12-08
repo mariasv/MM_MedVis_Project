@@ -1,0 +1,19 @@
+PyImageSearch
+=============
+Histogram of Oriented Gradients and Object Detection
+http://www.pyimagesearch.com/2014/11/10/histogram-oriented-gradients-object-detection/
+HOG detectMultiScale parameters explained
+http://www.pyimagesearch.com/2015/11/16/hog-detectmultiscale-parameters-explained/
+Non-Maximum Suppression for Object Detection in Python
+http://www.pyimagesearch.com/2014/11/17/non-maximum-suppression-object-detection-python/
+(Faster) Non-Maximum Suppression in Python
+http://www.pyimagesearch.com/2015/02/16/faster-non-maximum-suppression-python/
+
+Skibbe
+======
+http://dblp.uni-trier.de/pers/hd/s/Skibbe:Henrik
+https://bitbucket.org/skibbe/fourierchog/wiki/Home
+Circular Fourier HOG for 2D
+https://bitbucket.org/skibbe/sta-toolbox/wiki/Home
+Spherical Fourier HOG for 3D
+http://www.skibbe.info/chog/html/cta_demo.html

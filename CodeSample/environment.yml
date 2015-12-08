@@ -1,0 +1,9 @@
+name: objdet
+dependencies:
+  - numpy
+  - matplotlib
+  - scikit-image
+  - scikit-learn
+  - future
+  - scipy
+  - ipython-notebook
