@@ -92,8 +92,10 @@ class ObjectDetectorHOG(BaseEstimator):
         if np.asanyarray(X).ndim == 2:
             X = [X]
 
-        predicted_patches_prob = []
-
+        predicted_patches_prob = [] # list of the predicted patches for each image using probabilities
+        predicted_patches_pre_nms=[] # list of patches for which NMS is applied
+        predicted_patch_nms=[] # list of the predicted patches for each image using nms
+        predicted_patches_nms=[]
         # iterate over images to obtain a prediction for each image
         for image in X:
             image_scaled = self._rescale(image, self.scale_fraction)
@@ -112,14 +114,21 @@ class ObjectDetectorHOG(BaseEstimator):
                                          self.overlap_threshold)
             
             # predicted_patch_nms: patch predicted using nms 
-            predicted_patch_nms = self._non_max_suppression_fast(patches_coordinates, overlapThresh=self.overlap_threshold)
+            # most probable patches selected in order to apply NMS method          
+            for index, probability in enumerate(prediction[:, 1]):
+                patch = np.array(patches_coordinates[index])
+                #if probability > self.overlap_threshold:
+                if probability > 0.9:
+                    predicted_patches_pre_nms.append(patch)
+            
+            predicted_patch_nms = self._non_max_suppression_fast(np.array(predicted_patches_pre_nms), overlapThresh=self.overlap_threshold)
             predicted_patches_nms.append(predicted_patch_nms)
-            
-            plotting.plot_nms_prediction(image_scaled, predicted_patch_nms) # USE DIFFERENT COLORS
+            if debug:
+                plotting.plot_nms_prediction(image_scaled, predicted_patch_nms[0]) # USE DIFFERENT COLORS
 
             
-
-        return np.array(predicted_patches_prob) / self.scale_fraction#, np.array(predicted_patches_nms) / self.scale_fraction
+     
+        return np.array(predicted_patches_prob) / self.scale_fraction, np.array(predicted_patches_nms[0]) / self.scale_fraction
 
     def score(self, X, y):
         """
@@ -146,14 +155,20 @@ class ObjectDetectorHOG(BaseEstimator):
         X = np.asanyarray(X)
         y = np.asanyarray(y)
         
-        predictions = self.predict(X)
-        scores = []
+        predictions_prob,predictions_nms = self.predict(X)
+        scores_prob = []
+        scores_nms = []
         
-        for predicted_box, correct_box in zip(predictions, y):
-            overlap = contours.overlap_measure(correct_box, predicted_box)
-            scores.append(overlap)
+        for predicted_box_prob, correct_box in zip(predictions_prob, y):
+            overlap_prob = contours.overlap_measure(correct_box, predicted_box_prob)
+            scores_prob.append(overlap_prob)
+            
+        for predicted_box_nms, correct_box in zip(predictions_nms, y):
+            overlap_nms = contours.overlap_measure(correct_box, predicted_box_nms)
+            scores_nms.append(overlap_nms)
+            
 
-        return np.mean(scores)
+        return np.mean(scores_prob), np.mean(scores_nms)
 
     def _rescale(self, image, scale_factor):
         return transform.rescale(image, scale_factor, preserve_range=True).astype(image.dtype)
@@ -241,12 +256,19 @@ class ObjectDetectorHOG(BaseEstimator):
         y2=[]
  
         # grab the coordinates of the bounding boxes
-        #x1.append(boxes[:,0])
-        x1 = patches_coordinates[:,0]
-        y1 = patches_coordinates[:,1]
-        x2 = patches_coordinates[:,2]
-        y2 = patches_coordinates[:,3]
- 
+        #print(patches_coordinates)
+        x1 = patches_coordinates[:,0][:,0]
+        y1 = patches_coordinates[:,2][:,0]
+        x2 = patches_coordinates[:,0][:,1]
+        y2 = patches_coordinates[:,2][:,1]
+        #print('x1=')
+        #print(x1)
+        #print('y1=')
+        #print(y1)
+        #print('x2=')
+        #print(x2)
+        #print('y2=')
+        #print(y2)
         # compute the area of the bounding boxes and sort the bounding
         # boxes by the bottom-right y-coordinate of the bounding box
         area = (x2 - x1 + 1) * (y2 - y1 + 1)
@@ -283,7 +305,9 @@ class ObjectDetectorHOG(BaseEstimator):
  
         # return only the bounding boxes that were picked using the
         # integer data type
-        return boxes[pick].astype("int")
+        print('patches_coordinates[pick]=')
+        print(patches_coordinates[pick])
+        return patches_coordinates[pick].astype("int")
     
     def overlapping_area(detection_1, detection_2):
         '''

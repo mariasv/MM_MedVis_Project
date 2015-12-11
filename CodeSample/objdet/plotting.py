@@ -13,10 +13,15 @@ def plot_prediction(image_scaled, prediction, patches_coordinates, predicted_pat
     for index, probability in enumerate(prediction[:, 1]):
         patch = patches_coordinates[index]
         if probability > overlap_threshold:
-            # plot patches with a probability above the threshold in blue
-            plot_patch(ax, patch, color="b", linewidth=1, alpha=0.5)
-    # plot the predicted patch in green
-    plot_patch(ax, predicted_patch_prob, color="g", linewidth=1.5, alpha=1)
+            print(probability)
+            #plot patches with a probability above the threshold in blue
+            #plot_patch(ax, patch, color="y", linewidth=1, alpha=0.5)
+            
+    if debug:
+        print('predicted_patch_prob=')
+        print(predicted_patch_prob)
+    # plot the predicted patch in red
+    plot_patch(ax, predicted_patch_prob, color="r", linewidth=1.5, alpha=1)
 
 
 def plot_patch(ax, patch, color="b", linewidth=1.0, alpha=1.0):
@@ -27,4 +32,4 @@ def plot_patch(ax, patch, color="b", linewidth=1.0, alpha=1.0):
 def plot_nms_prediction(image_scaled, predicted_patch_nms):
     fig, ax = plt.subplots()
     ax.imshow(image_scaled.T, cmap=matplotlib.cm.gray)
-    plot_patch(ax, predicted_patch, color="g", linewidth=3, alpha=1)
+    plot_patch(ax, predicted_patch_nms, color="g", linewidth=3, alpha=1)
