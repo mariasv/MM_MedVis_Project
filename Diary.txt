@@ -1,0 +1,65 @@
+# 40 IMAGES (20 TRAIN,20 TEST) 
+
+
+-RANDOM FOREST CLASSIFIER
+mean_score_prob= 0.535582140653
+mean_score_nms= 0.483812654067
+
+- SVC CLASSIFIER SVM.SVC (DEFAULT VALUES) http://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC 
+mean_score_prob= 0.574515445951
+mean_score_nms= 0.317458090762
+
+- K NEIGHBORS  DEFAULT VALUES(N=5)
+mean_score_prob= 0.500969872307
+mean_score_nms= 0.38326894003
+
+- K NEIGHBORS  (N=3)
+mean_score_prob= 0.466693263569
+mean_score_nms= 0.38326894003
+
+- K NEIGHBORS  (N=10)
+mean_score_prob= 0.533415456582
+mean_score_nms= 0.317458090762
+
+- SVC CLASSIFIER SVM.SVC (LINEAR)
+mean_score_prob= 0.574688641636
+mean_score_nms= 0.38326894003
+
+- SVC CLASSIFIER SVM.SVC (LINEAR, C=0.025)
+mean_score_prob= 0.574136777916
+mean_score_nms= 0.317458090762
+
+- DECISION TREE
+mean_score_prob= 0.411170692735
+mean_score_nms= 0.191634470015
+
+- DECISION TREE (MAX DEPTH=5)
+mean_score_prob= 0.442182455534
+mean_score_nms= 0.191634470015
+
+- ADABOOST CLASSIFIER
+mean_score_prob= 0.569381132988
+mean_score_nms= 0.577127231784
+
+- GAUSSIAN NAIVE BAYES
+mean_score_prob= 0.535093902921
+mean_score_nms= 0.28249041776
+
+- LINEAR DISCRIMINANT ANALYSIS
+mean_score_prob= 0.535093902921
+mean_score_nms= 0.28249041776
+
+- QUADRADIT DISCRIMINANT ANALYSIS
+mean_score_prob= 0.535093902921
+mean_score_nms= 0.28249041776
+
+
+
+PREGUNTA
+[autoreload of objdet.object_detector failed: Traceback (most recent call last):
+  File "C:\Users\Maria\Anaconda3\lib\site-packages\IPython\extensions\autoreload.py", line 247, in check
+    superreload(m, reload, self.old_objects)
+ImportError: No module named 'sklearn.discriminant_analysis'
+]
+
+ME SALE ESTO Y CUANDO VUELVO A PROBAR OTROS CLASSIFIERS YA NO ME DEJA

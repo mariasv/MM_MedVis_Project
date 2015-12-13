@@ -6,6 +6,10 @@ import numpy as np
 import skimage
 import skimage.feature
 import sklearn.ensemble
+import sklearn.svm
+import sklearn.neighbors
+import sklearn.tree
+import sklearn.naive_bayes
 import matplotlib
 import matplotlib.pyplot as plt
 from . import contours, plotting
@@ -18,9 +22,11 @@ class ObjectDetectorHOG(BaseEstimator):
     Object detection using histogram of oriented gradients, based on a blog post by Adrian Rosebrock on November 10,
     2014. Available at: http://www.pyimagesearch.com/2014/11/10/histogram-oriented-gradients-object-detection/
     """
-
+    
+    
     def __init__(self, patch_size=(96, 96), step_size=10, scale_fraction=0.0625, overlap_threshold=0.4,
                  orientations=9, pixels_per_cell=(32, 32), cells_per_block=(3, 3)):
+
         self.patch_size = patch_size
         self.step_size = step_size
         self.scale_fraction = scale_fraction
@@ -70,7 +76,16 @@ class ObjectDetectorHOG(BaseEstimator):
         labels[labels > self.overlap_threshold] = 1
         labels[labels < 1] = 0
         # train random forest classifier
-        self.classifier_ = sklearn.ensemble.RandomForestClassifier()
+        #self.classifier_ = sklearn.ensemble.RandomForestClassifier()
+        #self.classifier_ = sklearn.svm.SVC(probability=True)
+        #self.classifier_ = sklearn.neighbors.KNeighborsClassifier(10)
+        #self.classifier_ = sklearn.svm.SVC(probability=True,kernel="linear")
+        #self.classifier_ = sklearn.svm.SVC(probability=True,C=0.025, kernel="linear")
+        #self.classifier_ =sklearn.tree.DecisionTreeClassifier(max_depth=5)
+        self.classifier_ = sklearn.ensemble.AdaBoostClassifier()
+        #self.classifier_ =sklearn.naive_bayes.GaussianNB()
+        #self.classifier_ = sklearn.discriminant_analysis.LinearDiscriminantAnalysis()
+        #self.classifier_ =sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
         self.classifier_.fit(train_features, labels)
 
     def predict(self, X, debug=False):
@@ -123,15 +138,16 @@ class ObjectDetectorHOG(BaseEstimator):
             # most probable patches selected in order to apply NMS method          
             for index, probability in enumerate(prediction[:, 1]):
                 patch = np.array(patches_coordinates[index])
-                if probability > 0.8:
+                if probability >= 0.9:
                     predicted_patches_pre_nms.append(patch)
                     
             # if no patches have probability>overlap_threshold, the most probable one will be chosen
             if len(predicted_patches_pre_nms)==0:
                 predicted_patches_pre_nms.append(predicted_patch_prob)
+            if debug:    
+                print('predicted_patches_pre_nms=')
+                print(predicted_patches_pre_nms)
                 
-            print('predicted_patches_pre_nms=')
-            print(predicted_patches_pre_nms)
             predicted_patch_nms = self._non_max_suppression_fast(np.array(predicted_patches_pre_nms), overlapThresh=self.overlap_threshold)
             predicted_patches_nms.append(predicted_patch_nms)
             if debug:
