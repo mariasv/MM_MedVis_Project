@@ -1,96 +1,78 @@
-# 40 IMAGES (20 TRAIN,20 TEST) 
+# 24 IMAGES (12 TRAIN,12 TEST) 
 
-
--RANDOM FOREST CLASSIFIER
-mean_score_prob= 0.535582140653
-mean_score_nms= 0.483812654067
+			31th DEC
 
 - SVC CLASSIFIER SVM.SVC (DEFAULT VALUES) http://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html#sklearn.svm.SVC 
-mean_score_prob= 0.574515445951
-mean_score_nms= 0.317458090762
+mean_score_prob= 0.57353583319
+mean_score_nms= 0.559535494437
 
-- K NEIGHBORS  DEFAULT VALUES(N=5)
-mean_score_prob= 0.500969872307
-mean_score_nms= 0.38326894003
+mean_score_prob= 0.57353583319
+mean_score_nms= 0.563696784759
 
-- K NEIGHBORS  (N=3)
-mean_score_prob= 0.466693263569
-mean_score_nms= 0.38326894003
 
-- K NEIGHBORS  (N=10)
-mean_score_prob= 0.533415456582
-mean_score_nms= 0.317458090762
-
-- SVC CLASSIFIER SVM.SVC (LINEAR)
-mean_score_prob= 0.574688641636
-mean_score_nms= 0.38326894003
-
-- SVC CLASSIFIER SVM.SVC (LINEAR, C=0.025)
-mean_score_prob= 0.574136777916
-mean_score_nms= 0.317458090762
-
-- DECISION TREE
-mean_score_prob= 0.411170692735
-mean_score_nms= 0.191634470015
-
-- DECISION TREE (MAX DEPTH=5)
-mean_score_prob= 0.442182455534
-mean_score_nms= 0.191634470015
-
-- ADABOOST CLASSIFIER
-mean_score_prob= 0.569381132988
-mean_score_nms= 0.577127231784
-
-- GAUSSIAN NAIVE BAYES
-mean_score_prob= 0.535093902921
-mean_score_nms= 0.28249041776
-
-- LINEAR DISCRIMINANT ANALYSIS
-mean_score_prob= 0.535093902921
-mean_score_nms= 0.28249041776
-
-- QUADRADIT DISCRIMINANT ANALYSIS
-mean_score_prob= 0.535093902921
-mean_score_nms= 0.28249041776
+mean_score_prob= 0.57353583319
+mean_score_nms= 0.469188356683
 
 
 
-PREGUNTA
-[autoreload of objdet.object_detector failed: Traceback (most recent call last):
-  File "C:\Users\Maria\Anaconda3\lib\site-packages\IPython\extensions\autoreload.py", line 247, in check
-    superreload(m, reload, self.old_objects)
-ImportError: No module named 'sklearn.discriminant_analysis'
-]
-
-ME SALE ESTO Y CUANDO VUELVO A PROBAR OTROS CLASSIFIERS YA NO ME DEJA
-
-______________________ADABOOST
-mean_score_prob= 0.569381132988
-mean_score_nms= 0.577127231784
-
-
-________________RANDOM FOREST:
-
-mean_score_prob= 0.581151857057
-mean_score_nms= 0.0210498802739
-
-____________________kneighbours
-
-mean_score_prob= 0.533415456582
-mean_score_nms= 0.0210498802739
-
-
-mean_score_prob= 0.507483174949
-mean_score_nms= 0.60352
-
-_______________ SCORE NMS ES SIEMPRE IGUAL... MIRAR EXACTAMENTE LO QUE HACE NMS Y SI USA TODOS LOS PATCHES O NO
 
 PENDIENTE: 
--LO ANTERIOR
+- LO ANTERIOR
 -MIRAR SI SENSITIVITY VS. 1- SPECEFICITY ES LO MISMO QUE PRECISION VS. RECALL (ROC)
 - MIRAR SI LAS CURVAS ROC SON MEJORES QUE EL SCORE. EN QUÉ SE DIFERENCIAN
-- CUANDO TENGAS TODO ESTO CLARO: EMAIL A KORIJN (PRIMERO SOLUCIONA LO DE NMS)
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+
+test_cls=['RandomForest','KNeighborsClassifier','SVC']
+test_overlap_threshold_nms=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8 ,0.9]
+
+[[ 0.58067663  0.58021164  0.5542442 ]
+ [ 0.48601294  0.58021164  0.55953549]
+ [ 0.58875908  0.58021164  0.56369678]
+ [ 0.56591653  0.58021164  0.55953549]
+ [ 0.57770407  0.58021164  0.56369678]
+ [ 0.58570388  0.58021164  0.5515432 ]
+ [ 0.58005473  0.58021164  0.56369678]
+ [ 0.525839    0.58021164  0.56369678]
+ [ 0.57471191  0.58021164  0.57495828]]
+
+
+test_cls=['RandomForest','KNeighborsClassifier','SVC','AdaBoostClassifier','GaussianNB','LinearDiscriminantAnalysis','QuadraticDiscriminantAnalysis']
+    test_overlap_threshold_nms=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8 ,0.9]
+
+[[ 0.57694416  0.58021164  0.56369678  0.60151162  0.40589701  0.          0.        ]
+ [ 0.59429534  0.58021164  0.55953549  0.60151162  0.40589701  0.          0.        ]
+ [ 0.56949922  0.58021164  0.49242707  0.60151162  0.40589701  0.          0.        ]
+ [ 0.57781526  0.58021164  0.48523338  0.60151162  0.40589701  0.          0.        ]
+ [ 0.59489163  0.58021164  0.55953549  0.60151162  0.40589701  0.          0.        ]
+ [ 0.5296101   0.58021164  0.48523338  0.60151162  0.41546262  0.          0.        ]
+ [ 0.59129948  0.58021164  0.46609819  0.60151162  0.47895002  0.          0.        ]
+ [ 0.49862622  0.58021164  0.54464411  0.60151162  0.43900168  0.          0.        ]
+ [ 0.59465985  0.58021164  0.56874343  0.60151162  0.43095328  0.          0.        ]]
+
+
+test_cls=['LinearDiscriminantAnalysis','QuadraticDiscriminantAnalysis']
+test_overlap_threshold_nms=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8 ,0.9]
+
+[[ 0.4798185   0.        ]
+ [ 0.4798185   0.        ]
+ [ 0.4798185   0.        ]
+ [ 0.4798185   0.        ]
+ [ 0.4798185   0.        ]
+ [ 0.4798185   0.        ]
+ [ 0.4798185   0.        ]
+ [ 0.52633948  0.        ]
+ [ 0.5350265   0.        ]]
 
 
 
 
+PENDIENTE
+- probar SVC c=algo
+- estudiar AdaBoost y Kneighbours y ver por qué thr NMS no tiene ningún efecto en ellos
+- curvas PRECISION/RECALL
+
+PREGUNTAS
+- por qué QDA no funciona
+- por qué AdaBoost y KN son constantes
