@@ -14,7 +14,7 @@ def plot_prediction(image_scaled, prediction, patches_coordinates, predicted_pat
         patch = patches_coordinates[index]
         #if probability > overlap_threshold:
             #plot patches with a probability above the threshold in blue
-            #plot_patch(ax, patch, color="y", linewidth=1, alpha=0.5)
+            #plot_patch(ax, patch, color="b", linewidth=1, alpha=0.5)
     print('predicted_patch_prob=')
     print(predicted_patch_prob)
     # plot the predicted patch in red

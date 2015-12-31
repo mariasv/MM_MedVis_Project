@@ -13,6 +13,7 @@
 		- Probability/overlap threshold
 		- scale_fraction? 
 		- Type of classifier
+		- threshold nms
 		
 	- HOG PROBLEMS 
 		1. outliers

@@ -1,4 +1,6 @@
 name: objdet
+channels:
+  - clinicalgraphics
 dependencies:
   - numpy
   - matplotlib
@@ -6,4 +8,5 @@ dependencies:
   - scikit-learn
   - future
   - scipy
-  - ipython-notebook
+  - jupyter
+  - notebook

@@ -21,19 +21,33 @@ class ObjectDetectorHOG(BaseEstimator):
     """
     Object detection using histogram of oriented gradients, based on a blog post by Adrian Rosebrock on November 10,
     2014. Available at: http://www.pyimagesearch.com/2014/11/10/histogram-oriented-gradients-object-detection/
+    
+     Possible classifiers:
+     clasfr= 'RandomForest'
+     clasfr= 'KNeighborsClassifier'
+     clasfr= 'SVC'
+     clasfr= 'GaussianNB'
+     clasfr= 'RandomForest'
+     clasfr= 'LinearDiscriminantAnalysis'
+     clasfr= 'QuadraticDiscriminantAnalysis'
     """
     
     
-    def __init__(self, patch_size=(96, 96), step_size=10, scale_fraction=0.0625, overlap_threshold=0.4,
-                 orientations=9, pixels_per_cell=(32, 32), cells_per_block=(3, 3)):
+    def __init__(self, patch_size=(96, 96), step_size=10, scale_fraction=0.0625, overlap_threshold_original=0.4,
+                 orientations=9, pixels_per_cell=(32, 32), cells_per_block=(3, 3), probability_thr_nms=0.6,overlap_threshold_nms=0.6,
+                 clasfr='RandomForest'):
+        
 
         self.patch_size = patch_size
         self.step_size = step_size
         self.scale_fraction = scale_fraction
-        self.overlap_threshold = overlap_threshold
+        self.overlap_threshold_original = overlap_threshold_original
         self.orientations = orientations
         self.pixels_per_cell = pixels_per_cell
         self.cells_per_block = cells_per_block
+        self.probability_thr_nms = probability_thr_nms 
+        self.overlap_threshold_nms = overlap_threshold_nms
+        self.clasfr=clasfr
 
     def fit(self, X, y, debug=False):
         """
@@ -50,7 +64,7 @@ class ObjectDetectorHOG(BaseEstimator):
         assert isinstance(self.patch_size, tuple), "patch_size should be a tuple"
         assert isinstance(self.step_size, int), "step_size should be an int"
         assert 0 <= self.scale_fraction <= 1, "scale_fraction should be between 0 and 1"
-        assert 0 <= self.overlap_threshold <= 1, "overlap_threshold should be between 0 and 1"
+        assert 0 <= self.overlap_threshold_original <= 1, "overlap_threshold_original should be between 0 and 1"
         assert isinstance(self.orientations, int), "orientations should be an int"
         assert isinstance(self.pixels_per_cell, tuple), "pixels_per_cell should be a tuple"
         assert isinstance(self.cells_per_block, tuple), "cells_per_block should be a tuple"
@@ -71,22 +85,37 @@ class ObjectDetectorHOG(BaseEstimator):
 
         train_features = np.array(train_features)
         labels = np.array(labels)
+        
+        print(self.probability_thr_nms)
 
         # create classification labels for patches based on the amount of overlap
-        labels[labels > self.overlap_threshold] = 1
+        labels[labels > self.overlap_threshold_original] = 1
         labels[labels < 1] = 0
-        # train random forest classifier
-        #self.classifier_ = sklearn.ensemble.RandomForestClassifier()
-        #self.classifier_ = sklearn.svm.SVC(probability=True)
-        #self.classifier_ = sklearn.neighbors.KNeighborsClassifier(10)
-        #self.classifier_ = sklearn.svm.SVC(probability=True,kernel="linear")
-        #self.classifier_ = sklearn.svm.SVC(probability=True,C=0.025, kernel="linear")
-        #self.classifier_ =sklearn.tree.DecisionTreeClassifier(max_depth=5)
-        self.classifier_ = sklearn.ensemble.AdaBoostClassifier()
-        #self.classifier_ =sklearn.naive_bayes.GaussianNB()
-        #self.classifier_ = sklearn.discriminant_analysis.LinearDiscriminantAnalysis()
-        #self.classifier_ =sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
+        # train classifier
+        if self.clasfr=='RandomForest':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier()
+        elif self.clasfr=='SVC':
+            self.classifier_ = sklearn.svm.SVC(probability=True)
+        elif self.clasfr=='KNeighborsClassifier':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(10)
+        elif self.clasfr=='SVC_linear':
+            self.classifier_ = sklearn.svm.SVC(probability=True,kernel="linear")
+        elif self.clasfr=='SVC_C0025_linear':
+            self.classifier_ = sklearn.svm.SVC(probability=True,C=0.025, kernel="linear")
+        elif self.clasfr=='DecisionTreeClassifier':
+            self.classifier_ =sklearn.tree.DecisionTreeClassifier(max_depth=5)
+        elif self.clasfr=='AdaBoostClassifier':
+            self.classifier_ = sklearn.ensemble.AdaBoostClassifier()
+        elif self.clasfr=='GaussianNB':
+            self.classifier_ =sklearn.naive_bayes.GaussianNB()
+        elif self.clasfr=='LinearDiscriminantAnalysis':
+            self.classifier_ = sklearn.discriminant_analysis.LinearDiscriminantAnalysis()
+        elif self.clasfr=='QuadraticDiscriminantAnalysis':
+            self.classifier_ =sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
+            
+
         self.classifier_.fit(train_features, labels)
+        #self.classifier_.fit(train_features, labels).decision_function
 
     def predict(self, X, debug=False):
         """
@@ -132,13 +161,13 @@ class ObjectDetectorHOG(BaseEstimator):
             
             if debug:
                 plotting.plot_prediction(image_scaled, prediction, patches_coordinates, predicted_patch_prob,
-                                         self.overlap_threshold)
+                                         self.overlap_threshold_original)
             
             # predicted_patch_nms: patch predicted using nms 
             # most probable patches selected in order to apply NMS method          
             for index, probability in enumerate(prediction[:, 1]):
                 patch = np.array(patches_coordinates[index])
-                if probability >= 0.9:
+                if probability >= self.probability_thr_nms:
                     predicted_patches_pre_nms.append(patch)
                     
             # if no patches have probability>overlap_threshold, the most probable one will be chosen
@@ -148,16 +177,48 @@ class ObjectDetectorHOG(BaseEstimator):
                 print('predicted_patches_pre_nms=')
                 print(predicted_patches_pre_nms)
                 
-            predicted_patch_nms = self._non_max_suppression_fast(np.array(predicted_patches_pre_nms), overlapThresh=self.overlap_threshold)
-            predicted_patches_nms.append(predicted_patch_nms)
+            predicted_patch_nms = self._non_max_suppression_fast(np.array(predicted_patches_pre_nms))
+            
             if debug:
-                plotting.plot_nms_prediction(image_scaled, predicted_patch_nms[0]) # USE DIFFERENT COLORS
+                print('len(np.array(predicted_patch_nms))=')
+                print(len(np.array(predicted_patch_nms)))
+
+            
+            # predicted_patch_nsm may contain more than one patch, but we are interested in just one
+            #if len(predicted_patch_nms)>1:
+                #patches_coordinates_list=patches_coordinates.tolist()
+                #patch_vector=[]
+                #for index in (0,len(predicted_patch_nms)-1):
+                 #  print('predicted_patch_nms[index]')
+                    #print(predicted_patch_nms[index])
+                    #patch_index=patches_coordinates_list.index(predicted_patch_nms[index])
+                    #patch_vector[index,1]=patch_index 
+                    #patch_vector[index,2]=prediction[patch_index, 1] # patch probability stored in patch_vector[index,2]
+                    
+                #index_max = np.argmax(patch_vector[:, 2])
+                #predicted_patch_nms  = patches_coordinates[patch_vector[index_max, 1]]
+
+            
+            predicted_patches_nms.append(np.array(predicted_patch_nms))
+            
+            if debug:
+                print('OUTPUT PREDICTION: predicted_patch_nms=')
+                print(predicted_patch_nms)
+                print('OUTPUT PREDICTION: predicted_patch_prob=')
+                print(predicted_patch_prob)
+                #for index in enumerate(predicted_patch_nms[:, 1]):
+                #if len(predicted_patch_nms)>1:
+                    #last=len(predicted_patch_nms)-1
+                    #for index in (0,last):
+                    #plotting.plot_nms_prediction(image_scaled, predicted_patch_nms[index])
+                #elif len(predicted_patch_nms)==1:
+                plotting.plot_nms_prediction(image_scaled, predicted_patch_nms)
 
             
      
-        return np.array(predicted_patches_prob) / self.scale_fraction, np.array(predicted_patches_nms[0]) / self.scale_fraction
+        return np.array(predicted_patches_prob) / self.scale_fraction, np.array(predicted_patches_nms) / self.scale_fraction
 
-    def score(self, X, y):
+    def score(self, X, y, predictions_prob, predictions_nms, debug=False):
         """
         Calculate overlap between predicted bounding box and correct(manually selected) bounding box
 
@@ -182,7 +243,14 @@ class ObjectDetectorHOG(BaseEstimator):
         X = np.asanyarray(X)
         y = np.asanyarray(y)
         
-        predictions_prob,predictions_nms = self.predict(X)
+        #predictions_prob,predictions_nms = self.predict(X,debug=False)
+        
+        if debug:
+            print('predictions_prob=')
+            print(predictions_prob)
+            print('predictions_nms=')
+            print(predictions_nms)
+            
         scores_prob = []
         scores_nms = []
         
@@ -190,9 +258,13 @@ class ObjectDetectorHOG(BaseEstimator):
             overlap_prob = contours.overlap_measure(correct_box, predicted_box_prob)
             scores_prob.append(overlap_prob)
             
+
         for predicted_box_nms, correct_box in zip(predictions_nms, y):
             overlap_nms = contours.overlap_measure(correct_box, predicted_box_nms)
             scores_nms.append(overlap_nms)
+            
+            
+        # self._test_ROC(train_images,train_boxes,test_images,test_boxes)
             
 
         return np.mean(scores_prob), np.mean(scores_nms)
@@ -265,7 +337,7 @@ class ObjectDetectorHOG(BaseEstimator):
         return feature_vector, np.array(patches_coordinates), overlap_fractions
     
     # Malisiewicz et al.
-    def _non_max_suppression_fast(self, patches_coordinates, overlapThresh):
+    def _non_max_suppression_fast(self, patches_coordinates):
         # if there are no boxes, return an empty list
         #boxes = np.concatenate([boxes_tup, boxes_tup[0, :][np.newaxis, :]])
         if len(patches_coordinates) == 0:
@@ -323,17 +395,17 @@ class ObjectDetectorHOG(BaseEstimator):
  
             # delete all indexes from the index list that have
             idxs = np.delete(idxs, np.concatenate(([last],
-                np.where(overlap > overlapThresh)[0])))
+                np.where(overlap > self.overlap_threshold_nms)[0])))
  
         # return only the bounding boxes that were picked using the
         # integer data type
-        return patches_coordinates[pick].astype("int")
+        #print('patches_coordinates[pick][0]=')
+        #print(patches_coordinates[pick][0])
+        #print('len(patches_coordinates[pick])=')
+        #print(len(patches_coordinates[pick]))
+        #print('OUTPUT NSM= ')
+        #print(patches_coordinates[pick][0])
+        return patches_coordinates[pick][0].astype("int")
+        #return patches_coordinates[pick].astype("int")
     
-    
-    if __name__ == "__main__":
-        # Example of how to use the NMS Module
-        detections = [[31, 31, .9, 10, 10], [31, 31, .12, 10, 10], [100, 34, .8,10, 10]]
-        print("Detections before NMS = {}".format(detections))
-        print("Detections after NMS = {}".format(nms(detections)))
-    
-    
+  
