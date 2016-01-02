@@ -10,6 +10,7 @@ import sklearn.svm
 import sklearn.neighbors
 import sklearn.tree
 import sklearn.naive_bayes
+import sklearn.discriminant_analysis
 import matplotlib
 import matplotlib.pyplot as plt
 from . import contours, plotting
@@ -78,7 +79,7 @@ class ObjectDetectorHOG(BaseEstimator):
             # scale image for faster computation time.
             image_scaled = self._rescale(image, self.scale_fraction)
             scaled_box = bounding_box * self.scale_fraction
-            feature_vector, _, patch_overlaps = self._sliding_window_hog_patches(image_scaled, bounding_box=scaled_box,
+            feature_vector, _, patch_overlaps, patches_positions = self._sliding_window_hog_patches(image_scaled, bounding_box=scaled_box,
                                                                                  debug=debug)
             train_features += feature_vector
             labels += patch_overlaps
@@ -86,7 +87,6 @@ class ObjectDetectorHOG(BaseEstimator):
         train_features = np.array(train_features)
         labels = np.array(labels)
         
-        print(self.probability_thr_nms)
 
         # create classification labels for patches based on the amount of overlap
         labels[labels > self.overlap_threshold_original] = 1
@@ -96,12 +96,26 @@ class ObjectDetectorHOG(BaseEstimator):
             self.classifier_ = sklearn.ensemble.RandomForestClassifier()
         elif self.clasfr=='SVC':
             self.classifier_ = sklearn.svm.SVC(probability=True)
-        elif self.clasfr=='KNeighborsClassifier':
+        elif self.clasfr=='KNeighborsClassifier_k10':
             self.classifier_ = sklearn.neighbors.KNeighborsClassifier(10)
+        elif self.clasfr=='KNeighborsClassifier_k20':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(20)
+        elif self.clasfr=='KNeighborsClassifier_k30':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(30)
+        elif self.clasfr=='KNeighborsClassifier_k50':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(50)
+        elif self.clasfr=='KNeighborsClassifier_k5':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(5)
+        elif self.clasfr=='KNeighborsClassifier_k1':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(1)
+        elif self.clasfr=='KNeighborsClassifier_k2':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(2)
         elif self.clasfr=='SVC_linear':
             self.classifier_ = sklearn.svm.SVC(probability=True,kernel="linear")
         elif self.clasfr=='SVC_C0025_linear':
             self.classifier_ = sklearn.svm.SVC(probability=True,C=0.025, kernel="linear")
+        elif self.clasfr=='SVC_C2_linear':
+            self.classifier_ = sklearn.svm.SVC(probability=True,C=2, kernel="linear")
         elif self.clasfr=='DecisionTreeClassifier':
             self.classifier_ =sklearn.tree.DecisionTreeClassifier(max_depth=5)
         elif self.clasfr=='AdaBoostClassifier':
@@ -111,7 +125,7 @@ class ObjectDetectorHOG(BaseEstimator):
         elif self.clasfr=='LinearDiscriminantAnalysis':
             self.classifier_ = sklearn.discriminant_analysis.LinearDiscriminantAnalysis()
         elif self.clasfr=='QuadraticDiscriminantAnalysis':
-            self.classifier_ =sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
+            self.classifier_ = sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
             
 
         self.classifier_.fit(train_features, labels)
@@ -150,7 +164,7 @@ class ObjectDetectorHOG(BaseEstimator):
             
             image_scaled = self._rescale(image, self.scale_fraction)
             # calculate HOG features for patches created by moving a sliding window over the image
-            feature_vector, patches_coordinates, _ = self._sliding_window_hog_patches(image_scaled)
+            feature_vector, patches_coordinates, _ ,patches_positions= self._sliding_window_hog_patches(image_scaled)
             # predict the probability of the two classes for all patches
             prediction = self.classifier_.predict_proba(np.array(feature_vector))
 
@@ -177,28 +191,47 @@ class ObjectDetectorHOG(BaseEstimator):
                 print('predicted_patches_pre_nms=')
                 print(predicted_patches_pre_nms)
                 
-            predicted_patch_nms = self._non_max_suppression_fast(np.array(predicted_patches_pre_nms))
+            predicted_patch_nms, pick = self._non_max_suppression_fast(np.array(predicted_patches_pre_nms))
             
             if debug:
-                print('len(np.array(predicted_patch_nms))=')
-                print(len(np.array(predicted_patch_nms)))
-
+                print('len(predicted_patch_nms[[0]])=')
+                print(len(predicted_patch_nms[[0]]))
+                print('len(predicted_patch_nms[0])=')
+                print(len(predicted_patch_nms[0]))
+                print('len(predicted_patch_nms)=')
+                print(len(predicted_patch_nms))
+                print('len(predicted_patch_prob)=')
+                print(len(predicted_patch_prob))
+                #print('prediction[pick,1]=')
+                #print(prediction[pick,1])
             
-            # predicted_patch_nsm may contain more than one patch, but we are interested in just one
-            #if len(predicted_patch_nms)>1:
-                #patches_coordinates_list=patches_coordinates.tolist()
-                #patch_vector=[]
-                #for index in (0,len(predicted_patch_nms)-1):
-                 #  print('predicted_patch_nms[index]')
-                    #print(predicted_patch_nms[index])
-                    #patch_index=patches_coordinates_list.index(predicted_patch_nms[index])
-                    #patch_vector[index,1]=patch_index 
-                    #patch_vector[index,2]=prediction[patch_index, 1] # patch probability stored in patch_vector[index,2]
+            # predicted_patch_nsm may contain more than one patch, but we are interested in just one. Therefore, we take the most probable
+            if len(predicted_patch_nms)>1:
+                patches_coordinates_list=patches_coordinates.tolist()
+                probabilities=[] # vector to store the probability of each patch
+                positions=[] # vector to store positions of the patches in predicted_patches
+                for index in (0,len(predicted_patch_nms)-1):
                     
-                #index_max = np.argmax(patch_vector[:, 2])
-                #predicted_patch_nms  = patches_coordinates[patch_vector[index_max, 1]]
+                    predicted_patch_list=predicted_patch_nms[index].tolist()
+                    patch_index=patches_coordinates_list.index(predicted_patch_list)
+                    if debug:
+                        print('predicted_patch_nms[index]')
+                        print(predicted_patch_nms[index])
+                        print('patch_index=')
+                        print(patch_index)
+                        print('index=')
+                        print(index)
+                        print('patches_coordinates[patch_index]=')
+                        print(patches_coordinates[patch_index])
+                    positions.append(patch_index)
+                    probabilities.append(prediction[patch_index, 1])
+                    
+                index_max = np.argmax(probabilities)
+                predicted_patch_nms  = patches_coordinates[positions[index_max]]
 
-            
+            elif len(predicted_patch_nms)==1:
+                predicted_patch_nms=predicted_patch_nms[0]
+                
             predicted_patches_nms.append(np.array(predicted_patch_nms))
             
             if debug:
@@ -295,6 +328,7 @@ class ObjectDetectorHOG(BaseEstimator):
         patches_coordinates = []
         overlap_fractions = []
         feature_vector = []
+        patches_positions=[]
 
         image_width, image_height = image.shape
         patch_width, patch_height = self.patch_size
@@ -302,10 +336,17 @@ class ObjectDetectorHOG(BaseEstimator):
         if debug:
             fig, ax = plt.subplots()
             ax.imshow(image.T, cmap=matplotlib.cm.gray)
-
+            
+        # num_patch stores the number or the patch (first, second, third, ...)
+        patch_position=-1;
         # Move over x and y coordinates to create a sliding window and calculate the HOG features for each window
         for x in range(0, image_width - patch_width - 1, self.step_size):
             for y in range(0, image_height - patch_height - 1, self.step_size):
+                
+                # create a vector patches_positions with the position of the patch
+                patch_position=patch_position+1
+                patches_positions.append(patch_position)
+                
                 # calculate patch coordinates of sliding window using x and y coordinates and the patch size
                 patch_coordinates = np.array([[x, y], [x + patch_width, y], [x + patch_width, y + patch_height],
                                               [x, y + patch_height]])
@@ -334,7 +375,7 @@ class ObjectDetectorHOG(BaseEstimator):
             if bounding_box is not None:
                 plotting.plot_patch(ax, bounding_box, color="g", linewidth=2, alpha=1)
 
-        return feature_vector, np.array(patches_coordinates), overlap_fractions
+        return feature_vector, np.array(patches_coordinates), overlap_fractions, patches_positions
     
     # Malisiewicz et al.
     def _non_max_suppression_fast(self, patches_coordinates):
@@ -345,9 +386,8 @@ class ObjectDetectorHOG(BaseEstimator):
             return []
  
         # if the bounding boxes integers, convert them to floats --
-        # this is important since we'll be doing a bunch of divisions
-        #if boxes.dtype.kind == "i":
-            #boxes = boxes.astype("float")
+        if patches_coordinates.dtype.kind == "i":
+            boxes = patches_coordinates.astype("float")
  
         # initialize the list of picked indexes	
         pick = []
@@ -363,7 +403,7 @@ class ObjectDetectorHOG(BaseEstimator):
         x2 = patches_coordinates[:,0][:,1]
         y2 = patches_coordinates[:,2][:,1]
         
-        # compute the area of the bounding boxes and sort the bounding
+        # compute the areas of the bounding boxes and sort the bounding
         # boxes by the bottom-right y-coordinate of the bounding box
         area = (x2 - x1 + 1) * (y2 - y1 + 1)
         idxs = np.argsort(y2)
@@ -401,11 +441,15 @@ class ObjectDetectorHOG(BaseEstimator):
         # integer data type
         #print('patches_coordinates[pick][0]=')
         #print(patches_coordinates[pick][0])
+        #print('OUTPUT NSM patches_coordinates[pick] = ')
+        #print(np.array(patches_coordinates[pick]))
+        #print('[pick]= ')
+        #print([pick])
         #print('len(patches_coordinates[pick])=')
         #print(len(patches_coordinates[pick]))
-        #print('OUTPUT NSM= ')
-        #print(patches_coordinates[pick][0])
-        return patches_coordinates[pick][0].astype("int")
+        
+        # In this Object Detector we just want one patch
+        return patches_coordinates[pick].astype("int"), pick
         #return patches_coordinates[pick].astype("int")
     
   

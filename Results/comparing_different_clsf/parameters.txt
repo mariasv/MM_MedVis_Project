@@ -1,0 +1,10 @@
+detector = objdet.object_detector.ObjectDetectorHOG(patch_size=(96, 96), step_size=10, 
+                                                                scale_fraction=0.0625, 
+                                                                overlap_threshold_original=0.6,
+                                                                orientations=9, pixels_per_cell=(32, 32), 
+                                                                cells_per_block=(3, 3), probability_thr_nms=0.6, 
+                                                                overlap_threshold_nms=thr,
+                                                                clasfr=clsf)
+
+
+k=10

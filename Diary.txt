@@ -71,8 +71,11 @@ test_overlap_threshold_nms=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8 ,0.9]
 PENDIENTE
 - probar SVC c=algo
 - estudiar AdaBoost y Kneighbours y ver por qué thr NMS no tiene ningún efecto en ellos
+- grid search con svc
+- diferente numero de imagenes cuando tengamos los mejores clsf
 - curvas PRECISION/RECALL
 
 PREGUNTAS
 - por qué QDA no funciona
 - por qué AdaBoost y KN son constantes
+- parece que overlap_thr_nms no tiene ningún efecto en el output por classifier... quizas cambiando otro parametro
