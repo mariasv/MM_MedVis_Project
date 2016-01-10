@@ -16,6 +16,11 @@ import matplotlib.pyplot as plt
 from . import contours, plotting
 from sklearn.base import BaseEstimator
 from skimage import transform
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import average_precision_score
+from sklearn.cross_validation import train_test_split
+from sklearn.preprocessing import label_binarize
+from sklearn.multiclass import OneVsRestClassifier
 
 
 class ObjectDetectorHOG(BaseEstimator):
@@ -91,31 +96,64 @@ class ObjectDetectorHOG(BaseEstimator):
         # create classification labels for patches based on the amount of overlap
         labels[labels > self.overlap_threshold_original] = 1
         labels[labels < 1] = 0
-        # train classifier
-        if self.clasfr=='RandomForest':
+        
+        # select classifier
+        if self.clasfr=='RandomForest_10':
             self.classifier_ = sklearn.ensemble.RandomForestClassifier()
+        elif self.clasfr=='RandomForest_1':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =1)
+        elif self.clasfr=='RandomForest_3':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =3)
+        elif self.clasfr=='RandomForest_5':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =5)
+        elif self.clasfr=='RandomForest_15':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =15)
+        elif self.clasfr=='RandomForest_20':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =20)
         elif self.clasfr=='SVC':
             self.classifier_ = sklearn.svm.SVC(probability=True)
-        elif self.clasfr=='KNeighborsClassifier_k10':
-            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(10)
-        elif self.clasfr=='KNeighborsClassifier_k20':
-            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(20)
-        elif self.clasfr=='KNeighborsClassifier_k30':
-            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(30)
-        elif self.clasfr=='KNeighborsClassifier_k50':
-            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(50)
-        elif self.clasfr=='KNeighborsClassifier_k5':
-            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(5)
         elif self.clasfr=='KNeighborsClassifier_k1':
             self.classifier_ = sklearn.neighbors.KNeighborsClassifier(1)
         elif self.clasfr=='KNeighborsClassifier_k2':
             self.classifier_ = sklearn.neighbors.KNeighborsClassifier(2)
-        elif self.clasfr=='SVC_linear':
+        elif self.clasfr=='KNeighborsClassifier_k5':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(5)
+        elif self.clasfr=='KNeighborsClassifier_k10':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(10)
+        elif self.clasfr=='KNeighborsClassifier_k12':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(12)
+        elif self.clasfr=='KNeighborsClassifier_k15':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(15)
+        elif self.clasfr=='KNeighborsClassifier_k20':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(20)
+        elif self.clasfr=='KNeighborsClassifier_k24':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(24)
+        elif self.clasfr=='KNeighborsClassifier_k25':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(25)
+        elif self.clasfr=='KNeighborsClassifier_k30':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(30)
+        elif self.clasfr=='KNeighborsClassifier_k35':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(35)
+        elif self.clasfr=='KNeighborsClassifier_k40':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(40)
+        elif self.clasfr=='KNeighborsClassifier_k45':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(45)
+        elif self.clasfr=='KNeighborsClassifier_k50':
+            self.classifier_ = sklearn.neighbors.KNeighborsClassifier(50) 
+        elif self.clasfr=='SVC_C1_rbf': 
+            self.classifier_ = sklearn.svm.SVC(probability=True)
+        elif self.clasfr=='SVC_C1_linear':
             self.classifier_ = sklearn.svm.SVC(probability=True,kernel="linear")
         elif self.clasfr=='SVC_C0025_linear':
             self.classifier_ = sklearn.svm.SVC(probability=True,C=0.025, kernel="linear")
         elif self.clasfr=='SVC_C2_linear':
             self.classifier_ = sklearn.svm.SVC(probability=True,C=2, kernel="linear")
+        elif self.clasfr=='SVC_d2_poly':
+            self.classifier_ = sklearn.svm.SVC(probability=True,C=1, kernel="poly", degree=2)
+        elif self.clasfr=='SVC_d3_poly':
+            self.classifier_ = sklearn.svm.SVC(probability=True,C=1, kernel="poly", degree=3)
+        elif self.clasfr=='SVC_sigmoid':
+            self.classifier_ = sklearn.svm.SVC(probability=True,C=1, kernel="sigmoid")
         elif self.clasfr=='DecisionTreeClassifier':
             self.classifier_ =sklearn.tree.DecisionTreeClassifier(max_depth=5)
         elif self.clasfr=='AdaBoostClassifier':
@@ -127,9 +165,10 @@ class ObjectDetectorHOG(BaseEstimator):
         elif self.clasfr=='QuadraticDiscriminantAnalysis':
             self.classifier_ = sklearn.discriminant_analysis.QuadraticDiscriminantAnalysis()
             
-
+        # train classifier
         self.classifier_.fit(train_features, labels)
-        #self.classifier_.fit(train_features, labels).decision_function
+        # self.classifier_.fit(train_features, labels).decision_function
+        return np.array(train_features), np.array(labels)
 
     def predict(self, X, debug=False):
         """
@@ -300,7 +339,62 @@ class ObjectDetectorHOG(BaseEstimator):
         # self._test_ROC(train_images,train_boxes,test_images,test_boxes)
             
 
+        #return np.mean(scores_prob), np.mean(scores_nms)
+        return np.array(scores_prob)
+    
+    
+    
+    def mean_score(self, X, y, predictions_prob, predictions_nms, debug=False):
+        """
+        Calculate overlap between predicted bounding box and correct(manually selected) bounding box
+
+        Parameters
+        ----------
+        X_test : array or list
+            Image or list of images that has an object that needs to be detected.
+        y : array, [n_boxes, n_points, 2]
+            x- and y-coordinates of correct(manually selected) polygon of bounding box consisting of n_points
+
+        Returns
+        -------
+        score : float
+            mean score
+        """
+        # if there is only one input make it list
+        if np.asanyarray(X).ndim == 2:
+            X = [X]
+        if np.asanyarray(y).ndim == 2:
+            y = [y]
+
+        X = np.asanyarray(X)
+        y = np.asanyarray(y)
+        
+        #predictions_prob,predictions_nms = self.predict(X,debug=False)
+        
+        if debug:
+            print('predictions_prob=')
+            print(predictions_prob)
+            print('predictions_nms=')
+            print(predictions_nms)
+            
+        scores_prob = []
+        scores_nms = []
+        
+        for predicted_box_prob, correct_box in zip(predictions_prob, y):
+            overlap_prob = contours.overlap_measure(correct_box, predicted_box_prob)
+            scores_prob.append(overlap_prob)
+            
+
+        for predicted_box_nms, correct_box in zip(predictions_nms, y):
+            overlap_nms = contours.overlap_measure(correct_box, predicted_box_nms)
+            scores_nms.append(overlap_nms)
+            
+            
+        # self._test_ROC(train_images,train_boxes,test_images,test_boxes)
+            
+
         return np.mean(scores_prob), np.mean(scores_nms)
+        # return np.array(scores_prob)
 
     def _rescale(self, image, scale_factor):
         return transform.rescale(image, scale_factor, preserve_range=True).astype(image.dtype)
@@ -451,5 +545,76 @@ class ObjectDetectorHOG(BaseEstimator):
         # In this Object Detector we just want one patch
         return patches_coordinates[pick].astype("int"), pick
         #return patches_coordinates[pick].astype("int")
+        
+    def classifier_performance(self, train_images, train_boxes, test_images, test_boxes , debug=False):
+        
+        train_features,train_labels=self.fit(train_images, train_boxes, debug=False)
+        train_labels=np.array(train_labels)
+        train_features=np.array(train_features)
+        if debug:
+            print('train_features=')
+            print(train_features)
+            print('train_labels=')
+            print(train_labels)
+            print('len(train_features)=')
+            print(len(train_features))
+            print('len(train_labels)=')
+            print(len(train_labels))
+            
+        prediction = self.classifier_.predict_proba(np.array(train_features))
+        #predicted_boxes_prob, predicted_boxes_nms = detector.predict(test_images,debug=False)
+        #y_score= detector.score(test_images, test_boxes,predicted_boxes_prob,predicted_boxes_nms, debug=False)
+        prediction=np.array(prediction)
+        
+        if debug:
+            print('prediction=')
+            print(prediction)
+            print('len(prediction)=')
+            print(len(prediction))
+            print('max(prediction[:,1])=')
+            print(max(prediction[:,1]))
+            print('len(prediction[:,1])=')
+            print(len(prediction[:,1]))
+            
+        # Compute Precision-Recall and plot curve
+        precision = dict()
+        recall = dict()
+        average_precision = dict()
+        #for i in range(n_classes):
+            # precision[i], recall[i], _ = precision_recall_curve(y_test[:, i],
+             #                                                   y_score[:, i])
+            #average_precision[i] = average_precision_score(y_test[:, i], y_score[:, i])
+
+        precision, recall, _ = precision_recall_curve(train_labels,prediction[:,1])
+        average_precision = average_precision_score(train_labels, prediction[:,1])  
+        
+        
+        return precision, recall, average_precision
+
+        # Compute micro-average ROC curve and ROC area
+        #precision["micro"], recall["micro"], _ = precision_recall_curve(train_labels.ravel(),
+            #prediction[:,1].ravel())
+        #average_precision["micro"] = average_precision_score(train_labels, prediction[:,1],
+        #                                                     average="micro")
+
+        # Plot Precision-Recall curve
+
+
+        # Plot Precision-Recall curve for each class
+        #plt.clf()
+        #plt.plot(recall["micro"], precision["micro"],
+        #         label='micro-average Precision-recall curve (area = {0:0.2f})'
+                      # ''.format(average_precision["micro"]))
+        #for i in range(n_classes):
+        #plt.plot(recall, precision,label='Precision-recall curve of class {0} (area = {1:0.2f})'''.format(1, average_precision))
+
+        #plt.xlim([0.0, 1.0])
+        #plt.ylim([0.0, 1.05])
+        #plt.xlabel('Recall')
+        #plt.ylabel('Precision')
+        #plt.title('Extension of Precision-Recall curve to multi-class')
+        #plt.legend(loc="lower right")
+        #plt.show()
+        
     
   
