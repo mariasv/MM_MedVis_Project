@@ -110,6 +110,8 @@ class ObjectDetectorHOG(BaseEstimator):
             self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =15)
         elif self.clasfr=='RandomForest_20':
             self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =20)
+        elif self.clasfr=='RandomForest_30':
+            self.classifier_ = sklearn.ensemble.RandomForestClassifier(n_estimators =30)
         elif self.clasfr=='SVC':
             self.classifier_ = sklearn.svm.SVC(probability=True)
         elif self.clasfr=='KNeighborsClassifier_k1':
@@ -195,7 +197,7 @@ class ObjectDetectorHOG(BaseEstimator):
         predicted_patches_prob = [] # list of the predicted patches for each image using probabilities
 
         predicted_patches_nms=[]
-        
+
         # iterate over images to obtain a prediction for each image
         for image in X:
             predicted_patches_pre_nms=[] # list of patches for which NMS is applied
@@ -210,6 +212,9 @@ class ObjectDetectorHOG(BaseEstimator):
             # The patch with maximum probability of being the second class is the predicted patch
             index_max = np.argmax(prediction[:, 1])
             predicted_patch_prob = patches_coordinates[index_max]
+
+            
+            
             predicted_patches_prob.append(predicted_patch_prob)
             
             if debug:
@@ -549,72 +554,75 @@ class ObjectDetectorHOG(BaseEstimator):
     def classifier_performance(self, train_images, train_boxes, test_images, test_boxes , debug=False):
         
         train_features,train_labels=self.fit(train_images, train_boxes, debug=False)
-        train_labels=np.array(train_labels)
-        train_features=np.array(train_features)
-        if debug:
-            print('train_features=')
-            print(train_features)
-            print('train_labels=')
-            print(train_labels)
-            print('len(train_features)=')
-            print(len(train_features))
-            print('len(train_labels)=')
-            print(len(train_labels))
+
+        
+          
+        predicted_patches_prob = [] # list of the predicted patches for each image using probabilities
+
+        predicted_labels_matrix=[]
+        predicted_labels=[]
+        predicted_labels_perimage=[]
+        probabilities=[]
+        
+        # iterate over images to obtain a prediction for each image
+        for image in test_images:
             
-        prediction = self.classifier_.predict_proba(np.array(train_features))
-        #predicted_boxes_prob, predicted_boxes_nms = detector.predict(test_images,debug=False)
-        #y_score= detector.score(test_images, test_boxes,predicted_boxes_prob,predicted_boxes_nms, debug=False)
-        prediction=np.array(prediction)
+            image_scaled = self._rescale(image, self.scale_fraction)
+            # calculate HOG features for patches created by moving a sliding window over the image
+            feature_vector, patches_coordinates, _ ,patches_positions= self._sliding_window_hog_patches(image_scaled)
+            # predict the probability of the two classes for all patches
+            prediction = self.classifier_.predict_proba(np.array(feature_vector))
+            predicted_labels_perimage=np.zeros(len(patches_positions))
+            
+            # The patch with maximum probability of being the second class is the predicted patch, labeled as 1
+            index_max = np.argmax(prediction[:, 1])
+            predicted_labels_perimage[index_max]=1
+            
+            if debug:
+                #print('probabilities=')
+                #print(probabilities)
+                #print('predicted_labels=')
+                #print(predicted_labels)
+                print('len(prediction[:, 1])=')
+                print(len(prediction[:, 1]))
+                print('len(predicted_labels_perimage)=')
+                print(len(predicted_labels_perimage))
+            
+
+            
+            probabilities.append(prediction[:, 1])
+            predicted_labels.append(predicted_labels_perimage)
+        
+            
+        probabilities=np.array(probabilities)
+        predicted_labels=np.array(predicted_labels)
+        
+        probabilities= np.concatenate(probabilities, axis=0)
+        predicted_labels=np.concatenate(predicted_labels,axis=0)
         
         if debug:
-            print('prediction=')
-            print(prediction)
-            print('len(prediction)=')
-            print(len(prediction))
-            print('max(prediction[:,1])=')
-            print(max(prediction[:,1]))
-            print('len(prediction[:,1])=')
-            print(len(prediction[:,1]))
+            print('probabilities=')
+            print(probabilities)
+            print('predicted_labels=')
+            print(predicted_labels)
+            print('len(probabilities)=')
+            print(len(probabilities))
+            print('len(predicted_labels)=')
+            print(len(predicted_labels))
             
         # Compute Precision-Recall and plot curve
         precision = dict()
         recall = dict()
         average_precision = dict()
-        #for i in range(n_classes):
-            # precision[i], recall[i], _ = precision_recall_curve(y_test[:, i],
-             #                                                   y_score[:, i])
-            #average_precision[i] = average_precision_score(y_test[:, i], y_score[:, i])
-
-        precision, recall, _ = precision_recall_curve(train_labels,prediction[:,1])
-        average_precision = average_precision_score(train_labels, prediction[:,1])  
         
+
+        precision, recall, _ = precision_recall_curve(predicted_labels, probabilities)
+        average_precision = average_precision_score(predicted_labels, probabilities)  
+        
+
         
         return precision, recall, average_precision
+        #return probabilities, predicted_labels
 
-        # Compute micro-average ROC curve and ROC area
-        #precision["micro"], recall["micro"], _ = precision_recall_curve(train_labels.ravel(),
-            #prediction[:,1].ravel())
-        #average_precision["micro"] = average_precision_score(train_labels, prediction[:,1],
-        #                                                     average="micro")
-
-        # Plot Precision-Recall curve
-
-
-        # Plot Precision-Recall curve for each class
-        #plt.clf()
-        #plt.plot(recall["micro"], precision["micro"],
-        #         label='micro-average Precision-recall curve (area = {0:0.2f})'
-                      # ''.format(average_precision["micro"]))
-        #for i in range(n_classes):
-        #plt.plot(recall, precision,label='Precision-recall curve of class {0} (area = {1:0.2f})'''.format(1, average_precision))
-
-        #plt.xlim([0.0, 1.0])
-        #plt.ylim([0.0, 1.05])
-        #plt.xlabel('Recall')
-        #plt.ylabel('Precision')
-        #plt.title('Extension of Precision-Recall curve to multi-class')
-        #plt.legend(loc="lower right")
-        #plt.show()
-        
     
   
